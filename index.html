@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="sv">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#ecd9b0" />
-    <title>Boule — Score Tracker</title>
+    <title>Boule — Scoretracker</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -12,10 +12,17 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="style.css" />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='12' fill='%23b38a4a'/%3E%3Ccircle cx='12' cy='12' r='2' fill='%23f7eac8'/%3E%3C/svg%3E"
-    />
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Boule" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content="Poängräknare för pétanque — Tjejerna vs Killarna" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+    <link rel="apple-touch-icon" href="icon-192.png" />
   </head>
   <body>
     <header class="app-header">
@@ -26,67 +33,75 @@
           <circle cx="26" cy="11" r="3" fill="#d94a1f" />
         </svg>
         <span class="brand-name">Boule</span>
+        <span class="series-badge" id="seriesBadge" title="Serieställning">—</span>
       </div>
       <div class="header-actions">
-        <button class="icon-btn" data-action="reset" aria-label="Reset match" title="Reset match">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        <button class="icon-btn" data-action="sound-toggle" aria-label="Ljud på/av" title="Ljud"></button>
+        <button class="icon-btn" data-action="history" aria-label="Matchhistorik" title="Historik">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
         </button>
-        <button class="icon-btn" data-theme-toggle aria-label="Toggle theme"></button>
+        <button class="icon-btn" data-action="settings" aria-label="Inställningar" title="Inställningar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+        <button class="icon-btn" data-theme-toggle aria-label="Växla tema"></button>
       </div>
     </header>
 
-    <main class="board" id="board">
-      <!-- Team cards injected by JS -->
-    </main>
+    <main class="board" id="board"></main>
 
-    <section class="meta" aria-label="Match info">
+    <section class="meta" aria-label="Matchinfo">
       <div class="meta-item">
-        <span class="meta-label">Round</span>
+        <span class="meta-label">Omgång</span>
         <span class="meta-value" id="roundNum">1</span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">Target</span>
+        <span class="meta-label">Mål</span>
         <span class="meta-value">
-          <button class="target-btn" id="targetBtn" aria-label="Change winning score">13</button>
+          <button class="target-btn" id="targetBtn" aria-label="Ändra målpoäng">13</button>
         </span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">Leader</span>
+        <span class="meta-label">Ledare</span>
         <span class="meta-value" id="leaderLabel">—</span>
       </div>
     </section>
 
-    <section class="history" aria-label="Round history">
+    <section class="history" aria-label="Omgångshistorik">
       <div class="history-head">
-        <h2>Rounds</h2>
+        <h2>Omgångar</h2>
         <button class="ghost-btn" id="undoBtn" disabled>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>
-          Undo last round
+          Ångra senaste
         </button>
       </div>
       <ol class="history-list" id="historyList" role="list">
-        <li class="history-empty">No rounds played yet — add points to a team to start.</li>
+        <li class="history-empty">Inga omgångar spelade än — lägg till poäng för att börja.</li>
       </ol>
     </section>
 
-    <!-- Winner overlay -->
+    <!-- Vinnarruta -->
     <div class="winner" id="winner" hidden>
       <div class="winner-card">
-        <div class="winner-eyebrow">Match over</div>
+        <div class="winner-eyebrow">Match slut</div>
         <div class="winner-name" id="winnerName">—</div>
         <div class="winner-score" id="winnerScore">— – —</div>
+        <div class="winner-meta" id="winnerMeta"></div>
         <div class="winner-actions">
-          <button class="primary-btn" data-action="rematch">Rematch</button>
-          <button class="ghost-btn" data-action="dismiss">Keep viewing</button>
+          <button class="primary-btn" data-action="save-match">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+            Spara match
+          </button>
+          <button class="ghost-btn" data-action="new-match">Ny match (behåll serie)</button>
+          <button class="ghost-btn" data-action="dismiss">Stäng</button>
         </div>
       </div>
     </div>
 
-    <!-- Target picker dialog -->
+    <!-- Målpoäng-dialog -->
     <dialog id="targetDialog" class="dialog">
       <form method="dialog">
-        <h3>Winning score</h3>
-        <p class="dialog-hint">First team to reach this total wins the match.</p>
+        <h3>Målpoäng</h3>
+        <p class="dialog-hint">Första laget som når hit vinner matchen.</p>
         <div class="target-options" role="radiogroup">
           <label><input type="radio" name="target" value="11" /><span>11</span></label>
           <label><input type="radio" name="target" value="13" /><span>13</span></label>
@@ -94,11 +109,107 @@
           <label><input type="radio" name="target" value="21" /><span>21</span></label>
         </div>
         <div class="dialog-actions">
-          <button value="cancel" class="ghost-btn">Cancel</button>
-          <button value="ok" class="primary-btn" id="targetOk">Save</button>
+          <button value="cancel" class="ghost-btn">Avbryt</button>
+          <button value="ok" class="primary-btn">Spara</button>
         </div>
       </form>
     </dialog>
+
+    <!-- Redigera lagnamn -->
+    <dialog id="teamDialog" class="dialog">
+      <form method="dialog">
+        <h3>Redigera lag</h3>
+        <div class="field">
+          <label for="teamA">Lag 1</label>
+          <input id="teamA" type="text" maxlength="24" />
+        </div>
+        <div class="field">
+          <label for="teamB">Lag 2</label>
+          <input id="teamB" type="text" maxlength="24" />
+        </div>
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost-btn">Avbryt</button>
+          <button value="ok" class="primary-btn">Spara</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Inställningar -->
+    <dialog id="settingsDialog" class="dialog dialog-wide">
+      <form method="dialog">
+        <h3>Inställningar</h3>
+
+        <div class="field">
+          <label class="inline">
+            <input type="checkbox" id="soundOn" />
+            <span>Ljudeffekter</span>
+          </label>
+        </div>
+
+        <h4>Permanent lagring</h4>
+        <p class="dialog-hint">
+          Välj vart avslutade matcher ska sparas. Alla varianter är valfria — appen fungerar utan.
+        </p>
+
+        <div class="field">
+          <label for="storageMode">Metod</label>
+          <select id="storageMode">
+            <option value="none">Ingen (bara lokalt i denna flik)</option>
+            <option value="jsonbin">JSONBin.io (kräver Master Key)</option>
+            <option value="webhook">Egen webhook-URL (t.ex. Google Apps Script)</option>
+          </select>
+        </div>
+
+        <div class="field" data-storage="jsonbin">
+          <label for="jsonbinKey">JSONBin Master Key (X-Master-Key)</label>
+          <input id="jsonbinKey" type="password" autocomplete="off" placeholder="$2a$10$..." />
+          <small class="dialog-hint">
+            Skapa gratis konto på jsonbin.io → API Keys → Master Key. Varje match blir en ny bin.
+          </small>
+        </div>
+
+        <div class="field" data-storage="webhook">
+          <label for="webhookUrl">Webhook-URL (POST, JSON)</label>
+          <input id="webhookUrl" type="url" placeholder="https://script.google.com/macros/s/.../exec" />
+          <small class="dialog-hint">
+            Alla matchdata skickas som JSON body. Ingen autentisering — sätt upp t.ex. en Google Apps Script-webhook.
+          </small>
+        </div>
+
+        <div class="field">
+          <label for="placeLabel">Standardplats (om GPS inte går)</label>
+          <input id="placeLabel" type="text" maxlength="60" placeholder="T.ex. Sexdrega gräsmatta" />
+        </div>
+
+        <div class="field">
+          <label class="inline">
+            <input type="checkbox" id="useGps" />
+            <span>Använd telefonens plats (GPS) vid sparning</span>
+          </label>
+        </div>
+
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost-btn">Avbryt</button>
+          <button value="ok" class="primary-btn">Spara</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Historik-dialog -->
+    <dialog id="historyDialog" class="dialog dialog-wide">
+      <form method="dialog">
+        <h3>Matchhistorik</h3>
+        <div class="series-summary" id="seriesSummary"></div>
+        <ol class="match-list" id="matchList"></ol>
+        <div class="dialog-actions between">
+          <button type="button" class="ghost-btn danger" id="resetSeriesBtn">Nollställ serie</button>
+          <button value="ok" class="primary-btn">Klart</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" hidden></div>
 
     <script src="app.js"></script>
   </body>
