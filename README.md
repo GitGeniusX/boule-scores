@@ -20,6 +20,14 @@ I inställningarna kan du välja att skicka avslutade matcher till:
 - **JSONBin.io** — enklast, kräver gratis konto och API-nyckel
 - **Google Apps Script webhook** — rad per match i ett Google Sheet, se [`APPS_SCRIPT_SETUP.md`](APPS_SCRIPT_SETUP.md)
 
+### Färdig Google Sheets-mall
+
+Ladda ner [**Boule-matcher-mall.xlsx**](https://github.com/GitGeniusX/boule-scores/raw/main/Boule-matcher-mall.xlsx) — innehåller instruktioner, Apps Script-kod att klistra in, målbladet med rätt kolumner och en sammanfattningsflik med färdiga KPI-formler.
+
+1. Ladda ner filen och lägg den i din Google Drive
+2. Högerklicka → **Öppna med › Google Kalkylark** → **Arkiv › Spara som Google Kalkylark**
+3. Följ fliken **Instruktioner** i arket
+
 Varje sparad match innehåller tid, tidszon, platsetikett, GPS-koordinater (om tillåtet), lagnamn, slutresultat, vinnare och fullständig omgångshistorik.
 
 ## Installera på telefonen
