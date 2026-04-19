@@ -3,10 +3,12 @@
   'use strict';
 
   // ---------- state ----------
+  const APP_VERSION = 'boule-v5';
+
   const defaultMatch = () => ({
     teams: [
-      { id: 'a', name: 'Tjejerna', score: 0 },
-      { id: 'b', name: 'Killarna', score: 0 },
+      { id: 'a', name: 'Tjejerna', score: 0, players: [] },
+      { id: 'b', name: 'Killarna', score: 0, players: [] },
     ],
     target: 13,
     rounds: [],
@@ -16,8 +18,10 @@
   });
 
   const defaultSeries = () => ({
-    matches: [], // { teams: [{name}], target, rounds, winner, startedAt, endedAt, place, location }
+    matches: [], // { teams: [{name, players}], target, rounds, winner, startedAt, endedAt, place, location }
   });
+
+  const defaultPlayers = () => []; // lista av strängar (namn, unika)
 
   const defaultSettings = () => ({
     soundOn: true,
@@ -29,7 +33,7 @@
   });
 
   // Persistens: localStorage när det funkar (riktig host), annars in-memory.
-  const LS_KEY = 'boule.v3';
+  const LS_KEY = 'boule.v4';
   const hasLS = (() => {
     try {
       const k = '__t';
@@ -62,10 +66,16 @@
   const saved = storage.load();
   let match = saved?.match || defaultMatch();
   let series = saved?.series || defaultSeries();
+  let players = Array.isArray(saved?.players) ? saved.players : defaultPlayers();
   let settings = { ...defaultSettings(), ...(saved?.settings || {}) };
 
+  // backward compat: äldre match-objekt saknar players-array
+  match.teams.forEach((t) => {
+    if (!Array.isArray(t.players)) t.players = [];
+  });
+
   function persist() {
-    storage.save({ match, series, settings });
+    storage.save({ match, series, players, settings });
   }
 
   // ---------- elements ----------
@@ -85,6 +95,9 @@
   const teamDialog = $('#teamDialog');
   const settingsDialog = $('#settingsDialog');
   const historyDialog = $('#historyDialog');
+  const playersDialog = $('#playersDialog');
+  const helpDialog = $('#helpDialog');
+  const resetDialog = $('#resetDialog');
   const toast = $('#toast');
 
   // ---------- ljud (WebAudio, inga externa filer) ----------
@@ -139,6 +152,10 @@
       const card = document.createElement('section');
       card.className = 'team-card' + (leading ? ' leading' : '');
       card.dataset.team = t.id;
+      const playersHtml =
+        t.players && t.players.length
+          ? `<div class="team-players">${t.players.map((p) => `<span class="chip">${escapeHtml(p)}</span>`).join('')}</div>`
+          : `<button type="button" class="team-players empty" data-action="players">+ Lägg till spelare</button>`;
       card.innerHTML = `
         <div class="team-name">
           <span class="team-icon" aria-hidden="true">${teamIcon(t.id)}</span>
@@ -147,6 +164,7 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pencil"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
           </button>
         </div>
+        ${playersHtml}
         <div class="score" data-score="${t.id}" aria-live="polite">${t.score}</div>
         <div class="points-row" role="group" aria-label="Poäng för ${escapeHtml(t.name)}">
           <button class="pt-btn minus" data-pt="${t.id}" data-v="-1" aria-label="Ta bort en poäng">−</button>
@@ -213,12 +231,16 @@
       seriesBadge.textContent = '—';
       return;
     }
-    const a = series.matches.filter((m) => winnerName_(m) === match.teams[0].name).length;
-    const b = series.matches.filter((m) => winnerName_(m) === match.teams[1].name).length;
+    // Räkna vinster på positionen (lag 1 = vinnare lika med teams[0].name i den matchen).
+    // Tidigare lagnamn behålls i m.teams så det fungerar även om lagen döpts om.
+    let a = 0;
+    let b = 0;
+    for (const m of series.matches) {
+      if (!m.winner || !m.teams) continue;
+      if (m.winner === m.teams[0]?.name) a++;
+      else if (m.winner === m.teams[1]?.name) b++;
+    }
     seriesBadge.textContent = `${a} – ${b}`;
-  }
-  function winnerName_(m) {
-    return m.teams.find((t, i) => (i === 0 ? 'a' : 'b') === m.winner)?.name;
   }
 
   function renderAll() {
@@ -314,6 +336,178 @@
     sound.click();
     persist();
   });
+
+  // ---------- spelare & lagsättning ----------
+  function normalize(name) {
+    return name.trim().replace(/\s+/g, ' ');
+  }
+
+  function addPlayer(rawName) {
+    const name = normalize(rawName);
+    if (!name) return false;
+    if (players.some((p) => p.toLowerCase() === name.toLowerCase())) {
+      showToast(`${name} finns redan`);
+      return false;
+    }
+    players.push(name);
+    players.sort((a, b) => a.localeCompare(b, 'sv'));
+    persist();
+    return true;
+  }
+
+  function removePlayer(name) {
+    players = players.filter((p) => p !== name);
+    // ta bort från ev. aktiv lagsättning
+    match.teams.forEach((t) => {
+      t.players = (t.players || []).filter((p) => p !== name);
+    });
+    persist();
+  }
+
+  function playerTeam(name) {
+    if (match.teams[0].players?.includes(name)) return 'a';
+    if (match.teams[1].players?.includes(name)) return 'b';
+    return null;
+  }
+
+  // Rotation: bänk → Tjejerna (a) → Killarna (b) → bänk
+  function cyclePlayer(name) {
+    const cur = playerTeam(name);
+    // ta bort från nuvarande
+    match.teams.forEach((t) => {
+      t.players = (t.players || []).filter((p) => p !== name);
+    });
+    let next;
+    if (cur === null) next = 'a';
+    else if (cur === 'a') next = 'b';
+    else next = null; // b → bänk
+    if (next) {
+      const team = match.teams.find((t) => t.id === next);
+      if (team.players.length >= 3) {
+        showToast(`Max 3 i ${team.name}`);
+        // rulla vidare till nästa
+        if (next === 'a') {
+          const teamB = match.teams[1];
+          if (teamB.players.length < 3) teamB.players.push(name);
+        }
+      } else {
+        team.players.push(name);
+      }
+    }
+    persist();
+    renderPlayersDialog();
+    renderBoard();
+  }
+
+  function renderPlayersDialog() {
+    const list = document.getElementById('playerList');
+    const count = document.getElementById('playerCount');
+    count.textContent = players.length;
+    if (players.length === 0) {
+      list.innerHTML = '<li class="history-empty">Inga spelare ännu — lägg till ovan.</li>';
+    } else {
+      list.innerHTML = players
+        .map((p) => {
+          const team = playerTeam(p);
+          const badge = team ? `<span class="team-tag team-tag-${team}">${team === 'a' ? match.teams[0].name : match.teams[1].name}</span>` : '<span class="team-tag bench">Bänk</span>';
+          return `
+            <li class="player-row">
+              <button type="button" class="player-btn" data-player="${escapeHtml(p)}">
+                <span class="player-name">${escapeHtml(p)}</span>
+                ${badge}
+              </button>
+              <button type="button" class="icon-btn small danger" data-remove="${escapeHtml(p)}" aria-label="Ta bort ${escapeHtml(p)}">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </li>`;
+        })
+        .join('');
+    }
+
+    // lineup-paneler
+    document.getElementById('lineupTitleA').textContent = match.teams[0].name;
+    document.getElementById('lineupTitleB').textContent = match.teams[1].name;
+    ['a', 'b'].forEach((id) => {
+      const team = match.teams.find((t) => t.id === id);
+      const el = document.getElementById(id === 'a' ? 'lineupListA' : 'lineupListB');
+      document.getElementById(id === 'a' ? 'lineupCountA' : 'lineupCountB').textContent =
+        `${team.players.length}/3`;
+      if (team.players.length === 0) {
+        el.innerHTML = '<li class="lineup-empty">—</li>';
+      } else {
+        el.innerHTML = team.players
+          .map((p) => `<li><button type="button" class="chip chip-${id}" data-player="${escapeHtml(p)}">${escapeHtml(p)}</button></li>`)
+          .join('');
+      }
+    });
+  }
+
+  function openPlayers() {
+    renderPlayersDialog();
+    playersDialog.showModal();
+  }
+
+  playersDialog.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-player]');
+    if (btn) {
+      cyclePlayer(btn.dataset.player);
+      sound.click();
+      return;
+    }
+    const rm = e.target.closest('[data-remove]');
+    if (rm) {
+      const name = rm.dataset.remove;
+      if (confirm(`Ta bort ${name}?`)) {
+        removePlayer(name);
+        renderPlayersDialog();
+        renderBoard();
+      }
+    }
+  });
+
+  document.getElementById('addPlayerBtn').addEventListener('click', () => {
+    const inp = document.getElementById('newPlayerName');
+    if (addPlayer(inp.value)) {
+      inp.value = '';
+      renderPlayersDialog();
+      sound.click();
+    }
+    inp.focus();
+  });
+
+  document.getElementById('newPlayerName').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('addPlayerBtn').click();
+    }
+  });
+
+  // ---------- reset matchen ----------
+  function confirmResetMatch() {
+    resetDialog.showModal();
+  }
+  resetDialog.addEventListener('close', () => {
+    if (resetDialog.returnValue !== 'ok') return;
+    match.teams.forEach((t) => {
+      t.score = 0;
+    });
+    match.rounds = [];
+    match.winner = null;
+    match.endedAt = null;
+    match.startedAt = new Date().toISOString();
+    winnerEl.hidden = true;
+    renderAll();
+    persist();
+    sound.undo();
+    showToast('Match nollställd');
+  });
+
+  // ---------- hjälp ----------
+  function openHelp() {
+    const v = document.getElementById('appVersion');
+    if (v) v.textContent = APP_VERSION;
+    helpDialog.showModal();
+  }
 
   // ---------- målpoäng ----------
   targetBtn.addEventListener('click', () => {
@@ -439,7 +633,7 @@
   function buildPayload(location, placeText) {
     return {
       app: 'boule-scoretracker',
-      version: 1,
+      version: 2,
       savedAt: new Date().toISOString(),
       startedAt: match.startedAt,
       endedAt: match.endedAt,
@@ -447,7 +641,7 @@
       place: placeText || settings.placeLabel || null,
       location, // { lat, lng, accuracy } eller null
       target: match.target,
-      teams: match.teams.map((t) => ({ name: t.name, score: t.score })),
+      teams: match.teams.map((t) => ({ name: t.name, score: t.score, players: (t.players || []).slice() })),
       winner: match.teams.find((t) => t.id === match.winner)?.name || null,
       rounds: match.rounds.map((r, i) => ({
         n: i + 1,
@@ -587,6 +781,12 @@
       case 'history':
         openHistory();
         break;
+      case 'players':
+        openPlayers();
+        break;
+      case 'help':
+        openHelp();
+        break;
       case 'settings':
         openSettings();
         break;
@@ -603,7 +803,10 @@
     }
   });
 
-  // keyboard: 1-5 = A, 6-0 = B, U = undo
+  // reset-knapp i meta-raden
+  document.getElementById('resetBtn').addEventListener('click', confirmResetMatch);
+
+  // keyboard: 1-5 = A, 6-0 = B, U = undo, R = reset
   document.addEventListener('keydown', (e) => {
     if (e.target.matches('input, textarea, select')) return;
     if (e.key >= '1' && e.key <= '5') addPoints('a', parseInt(e.key, 10));
@@ -611,6 +814,7 @@
       const map = { 6: 1, 7: 2, 8: 3, 9: 4, 0: 5 };
       addPoints('b', map[e.key]);
     } else if (e.key.toLowerCase() === 'u') undoLast();
+    else if (e.key.toLowerCase() === 'r') confirmResetMatch();
   });
 
   // ---------- tema ----------

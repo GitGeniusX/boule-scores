@@ -37,8 +37,14 @@
       </div>
       <div class="header-actions">
         <button class="icon-btn" data-action="sound-toggle" aria-label="Ljud på/av" title="Ljud"></button>
+        <button class="icon-btn" data-action="players" aria-label="Spelare" title="Spelare">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </button>
         <button class="icon-btn" data-action="history" aria-label="Matchhistorik" title="Historik">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/><path d="M12 7v5l3 2"/></svg>
+        </button>
+        <button class="icon-btn" data-action="help" aria-label="Hjälp" title="Hjälp">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         </button>
         <button class="icon-btn" data-action="settings" aria-label="Inställningar" title="Inställningar">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
@@ -63,6 +69,15 @@
       <div class="meta-item">
         <span class="meta-label">Ledare</span>
         <span class="meta-value" id="leaderLabel">—</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">&nbsp;</span>
+        <span class="meta-value">
+          <button class="reset-btn" id="resetBtn" aria-label="Nollställ matchen" title="Nollställ matchen (R)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+            Nollställ
+          </button>
+        </span>
       </div>
     </section>
 
@@ -204,6 +219,153 @@
         <div class="dialog-actions between">
           <button type="button" class="ghost-btn danger" id="resetSeriesBtn">Nollställ serie</button>
           <button value="ok" class="primary-btn">Klart</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Spelar-dialog -->
+    <dialog id="playersDialog" class="dialog dialog-wide">
+      <form method="dialog">
+        <h3>Spelare</h3>
+        <p class="dialog-hint">
+          Lägg till spelare. Vem som helst kan spela i vilket lag — du väljer lagsättning vid varje match.
+        </p>
+
+        <div class="field">
+          <label for="newPlayerName">Lägg till spelare</label>
+          <div class="add-row">
+            <input id="newPlayerName" type="text" maxlength="40" placeholder="Förnamn eller smeknamn" />
+            <button type="button" id="addPlayerBtn" class="primary-btn">Lägg till</button>
+          </div>
+        </div>
+
+        <h4>Alla spelare <span class="count-badge" id="playerCount">0</span></h4>
+        <ul class="player-list" id="playerList"></ul>
+
+        <h4>Lagsättning denna match</h4>
+        <p class="dialog-hint">Tryck på ett namn för att flytta mellan Tjejerna, Killarna och bänken. Max 3 per lag.</p>
+        <div class="lineup-grid">
+          <div class="lineup-col" data-lineup="a">
+            <div class="lineup-head"><span class="dot dot-a"></span><strong id="lineupTitleA">Tjejerna</strong> <span class="count" id="lineupCountA">0/3</span></div>
+            <ul class="lineup-list" id="lineupListA"></ul>
+          </div>
+          <div class="lineup-col" data-lineup="b">
+            <div class="lineup-head"><span class="dot dot-b"></span><strong id="lineupTitleB">Killarna</strong> <span class="count" id="lineupCountB">0/3</span></div>
+            <ul class="lineup-list" id="lineupListB"></ul>
+          </div>
+        </div>
+
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost-btn">Avbryt</button>
+          <button value="ok" class="primary-btn">Klart</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Hjälp-dialog -->
+    <dialog id="helpDialog" class="dialog dialog-wide">
+      <form method="dialog">
+        <h3>Hjälp & dokumentation</h3>
+
+        <nav class="help-toc" aria-label="Innehåll">
+          <a href="#h-start">Snabbstart</a>
+          <a href="#h-score">Poängsättning</a>
+          <a href="#h-players">Lag & spelare</a>
+          <a href="#h-series">Serie & reset</a>
+          <a href="#h-gps">GPS & plats</a>
+          <a href="#h-storage">Google Sheet</a>
+          <a href="#h-install">Installera</a>
+          <a href="#h-privacy">Integritet</a>
+        </nav>
+
+        <div class="help-body">
+          <section id="h-start">
+            <h4>Snabbstart</h4>
+            <ol>
+              <li>Öppna <em>Spelare</em>-ikonen (två personer) i toppen och lägg till alla som spelar.</li>
+              <li>Tryck på spelarnas namn för att välja lagsättning (1–3 per lag).</li>
+              <li>Spela matchen — tryck +1, +2, +3 osv. för respektive lag.</li>
+              <li>När någon når målpoängen: tryck <em>Spara match</em> så läggs den till i serien (och i ditt Google Sheet om du kopplat).</li>
+            </ol>
+          </section>
+
+          <section id="h-score">
+            <h4>Poängsättning</h4>
+            <p>Varje lag har knappar: <strong>−</strong> (ta bort), <strong>+1</strong>, <strong>+2</strong>, <strong>+3</strong>, <strong>+4</strong>, <strong>+5</strong>. Varje tryck räknas som en omgång i historiken.</p>
+            <p><strong>Tangentbord:</strong></p>
+            <ul>
+              <li><kbd>1</kbd>–<kbd>5</kbd> = poäng till Lag 1 (Tjejerna)</li>
+              <li><kbd>6</kbd>–<kbd>0</kbd> = poäng till Lag 2 (Killarna) (6=1p, 7=2p … 0=5p)</li>
+              <li><kbd>U</kbd> = ångra senaste omgång</li>
+              <li><kbd>R</kbd> = nollställ matchen (med bekräftelse)</li>
+            </ul>
+            <p><strong>Målpoäng</strong> ändrar du i meta-raden: 11, 13 (standard i pétanque), 15 eller 21.</p>
+          </section>
+
+          <section id="h-players">
+            <h4>Lag & spelare</h4>
+            <p>Spelare är globala — de hör inte till ett specifikt lag. Vid varje match kan du bygga om lagen hur du vill. I boule-regler är lagen 1–3 personer (tête-à-tête, doubletter, tripletter) och appen tillåter upp till 3 per lag.</p>
+            <p>Lagnamn (Tjejerna / Killarna) redigerar du genom att trycka på namnet i matchen. Byt lagsättning genom att öppna Spelare-dialogen och trycka på ett namn — det flyttas till nästa plats i rotationen Lag 1 → Lag 2 → bänk.</p>
+          </section>
+
+          <section id="h-series">
+            <h4>Serie & reset</h4>
+            <p>Badgen vid Boule-loggan visar <em>serieställningen</em> — totalt antal vunna matcher per lag (räknas på lag-id, inte namn, så namnändring påverkar inte).</p>
+            <p>Det finns tre nivåer av reset:</p>
+            <ul>
+              <li><strong>Nollställ matchen</strong> (knapp i meta-raden eller <kbd>R</kbd>) — poängen går till 0–0, lagen och spelarna behålls.</li>
+              <li><strong>Ny match (behåll serie)</strong> — syns på vinnarkortet, startar en ny match men räknar serien vidare.</li>
+              <li><strong>Nollställ serie</strong> — i Historik-dialogen, raderar alla sparade matcher lokalt. Påverkar inte ditt Google Sheet.</li>
+            </ul>
+          </section>
+
+          <section id="h-gps">
+            <h4>GPS & plats</h4>
+            <p>När du sparar en match hämtar appen telefonens position (om du tillåtit det) och översätter koordinaterna till en läsbar adress via OpenStreetMap Nominatim — t.ex. <em>Sexdrega, Svenljunga, Sverige</em>.</p>
+            <p>Du kan stänga av GPS i Inställningar. Då används din manuella <em>Standardplats</em> i stället.</p>
+          </section>
+
+          <section id="h-storage">
+            <h4>Lagring i Google Sheet</h4>
+            <p>Varje match kan skickas till ett Google Sheet via en Apps Script-webhook. Det ger dig varaktig historik med statistik, diagram och export.</p>
+            <p>Steg-för-steg: ladda ner <a href="https://github.com/GitGeniusX/boule-scores/raw/main/Boule-matcher-mall.xlsx" target="_blank" rel="noopener">Boule-matcher-mall.xlsx</a>, lägg i din Drive, öppna med Google Kalkylark och följ fliken <em>Instruktioner</em>. Den fullständiga guiden finns på <a href="https://github.com/GitGeniusX/boule-scores/blob/main/APPS_SCRIPT_SETUP.md" target="_blank" rel="noopener">GitHub</a>.</p>
+            <p>Klistra in den färdiga webhook-URL:en under <em>Inställningar → Permanent lagring → Egen webhook-URL</em>.</p>
+          </section>
+
+          <section id="h-install">
+            <h4>Installera på telefonen</h4>
+            <p>Appen är en PWA och fungerar offline:</p>
+            <ul>
+              <li><strong>iPhone/Safari:</strong> dela-ikonen → <em>Lägg till på hemskärmen</em></li>
+              <li><strong>Android/Chrome:</strong> menyn (⋮) → <em>Installera appen</em> / <em>Lägg till på hemskärmen</em></li>
+            </ul>
+          </section>
+
+          <section id="h-privacy">
+            <h4>Integritet</h4>
+            <p>All data (spelare, matcher, inställningar) sparas i telefonens lokala lagring (localStorage). Inget skickas någonstans såvida du inte själv väljer en lagringsmetod i Inställningar.</p>
+            <p>Om du valt Google Apps Script-webhook: din webhook-URL sparas lokalt på din telefon och används bara när du trycker <em>Spara match</em>. GPS-koordinater skickas bara med om du aktiverat GPS.</p>
+          </section>
+
+          <section class="help-footer">
+            <p><small>Källkod: <a href="https://github.com/GitGeniusX/boule-scores" target="_blank" rel="noopener">github.com/GitGeniusX/boule-scores</a> · App-version: <span id="appVersion">—</span></small></p>
+          </section>
+        </div>
+
+        <div class="dialog-actions">
+          <button value="ok" class="primary-btn">Stäng</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Reset-bekräftelse -->
+    <dialog id="resetDialog" class="dialog">
+      <form method="dialog">
+        <h3>Nollställ matchen?</h3>
+        <p class="dialog-hint">Poängen går till 0–0 och omgångshistoriken rensas. Lagen, spelarna och serien behålls.</p>
+        <div class="dialog-actions">
+          <button value="cancel" class="ghost-btn">Avbryt</button>
+          <button value="ok" class="primary-btn danger">Nollställ</button>
         </div>
       </form>
     </dialog>
