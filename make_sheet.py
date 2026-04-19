@@ -431,6 +431,86 @@ def build_matches(ws):
 
 
 # ---- Sheet 4: Sammanfattning (formler) -----------------------------------
+def build_lineups(ws):
+    ws.title = "Lagsättningar"
+    ws.sheet_view.showGridLines = False
+
+    headers = ["Match-ID", "Sparad", "Lag", "Lagnamn", "Spelare"]
+    for col, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = FONT_HEADER
+        cell.fill = PatternFill("solid", fgColor=HEADER_BG)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = BORDER
+
+    examples = [
+        ["2026-04-18T20:15:30.000Z-ab12c", "2026-04-18T20:15:30.000Z", "Lag 1", "Tjejerna", "Anna"],
+        ["2026-04-18T20:15:30.000Z-ab12c", "2026-04-18T20:15:30.000Z", "Lag 1", "Tjejerna", "Mia"],
+        ["2026-04-18T20:15:30.000Z-ab12c", "2026-04-18T20:15:30.000Z", "Lag 2", "Killarna", "Erik"],
+        ["2026-04-18T20:15:30.000Z-ab12c", "2026-04-18T20:15:30.000Z", "Lag 2", "Killarna", "Johan"],
+    ]
+    for i, row in enumerate(examples, start=2):
+        for col, val in enumerate(row, start=1):
+            c = ws.cell(row=i, column=col, value=val)
+            c.font = Font(name="Calibri", size=10, italic=True, color="999999")
+            c.border = BORDER
+
+    ws.freeze_panes = "A2"
+    set_col_widths(ws, [30, 22, 10, 16, 18])
+    ws.row_dimensions[1].height = 30
+
+    note = ws.cell(
+        row=7,
+        column=1,
+        value=(
+            "En rad per spelare och match. Fylls på automatiskt av webhooken. "
+            "Du kan ta bort exempelraderna ovan."
+        ),
+    )
+    note.font = FONT_SUB
+    ws.merge_cells(start_row=7, start_column=1, end_row=7, end_column=5)
+
+
+def build_players(ws):
+    ws.title = "Spelare"
+    ws.sheet_view.showGridLines = False
+
+    headers = ["Spelare", "Matcher", "Vinster", "Senast sedd"]
+    for col, h in enumerate(headers, start=1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = FONT_HEADER
+        cell.fill = PatternFill("solid", fgColor=HEADER_BG)
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = BORDER
+
+    examples = [
+        ["Anna", 1, 1, "2026-04-18T20:15:30.000Z"],
+        ["Erik", 1, 0, "2026-04-18T20:15:30.000Z"],
+        ["Johan", 1, 0, "2026-04-18T20:15:30.000Z"],
+        ["Mia", 1, 1, "2026-04-18T20:15:30.000Z"],
+    ]
+    for i, row in enumerate(examples, start=2):
+        for col, val in enumerate(row, start=1):
+            c = ws.cell(row=i, column=col, value=val)
+            c.font = Font(name="Calibri", size=10, italic=True, color="999999")
+            c.border = BORDER
+
+    ws.freeze_panes = "A2"
+    set_col_widths(ws, [20, 10, 10, 24])
+    ws.row_dimensions[1].height = 30
+
+    note = ws.cell(
+        row=7,
+        column=1,
+        value=(
+            "Webhooken underhåller denna flik automatiskt. Varje spelare får en rad "
+            "med totalt antal matcher, vinster och när de senast spelade."
+        ),
+    )
+    note.font = FONT_SUB
+    ws.merge_cells(start_row=7, start_column=1, end_row=7, end_column=4)
+
+
 def build_summary(ws):
     ws.title = "Sammanfattning"
     ws.sheet_view.showGridLines = False
@@ -568,10 +648,11 @@ def main():
 
     build_code(wb.create_sheet())
     build_matches(wb.create_sheet())
+    build_lineups(wb.create_sheet())
+    build_players(wb.create_sheet())
     build_summary(wb.create_sheet())
 
-    # Sheet order: Instruktioner, Apps Script-kod, Matcher, Sammanfattning
-    # (already in that order by creation)
+    # Sheet order: Instruktioner, Apps Script-kod, Matcher, Lagsättningar, Spelare, Sammanfattning
 
     out = "/home/user/workspace/boule-scores/Boule-matcher-mall.xlsx"
     wb.save(out)
