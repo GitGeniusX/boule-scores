@@ -1,7 +1,7 @@
 /* Boule Score Tracker — service worker
    Cache-first för app-skalet, network-first för externa anrop.
 */
-const VERSION = 'boule-v3';
+const VERSION = 'boule-v4';
 const APP_SHELL = [
   './',
   'index.html',

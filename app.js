@@ -379,12 +379,45 @@
     });
   }
 
+  // Omvänd geokodning via OpenStreetMap Nominatim — gratis, ingen nyckel.
+  // Returnerar en kort läsbar adress, t.ex. "Sexdrega, Svenljunga, Sverige".
+  async function reverseGeocode(lat, lng, timeoutMs = 5000) {
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=14&addressdetails=1&accept-language=sv`;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+      const r = await fetch(url, {
+        headers: { Accept: 'application/json' },
+        signal: ctrl.signal,
+      });
+      clearTimeout(timer);
+      if (!r.ok) return null;
+      const j = await r.json();
+      const a = j.address || {};
+      // Bygg en kompakt etikett: närmsta ort/stadsdel + kommun + land.
+      const primary =
+        a.village || a.town || a.suburb || a.city_district || a.hamlet || a.city || a.municipality;
+      const secondary = a.municipality && a.municipality !== primary ? a.municipality : a.county;
+      const country = a.country;
+      const parts = [primary, secondary, country].filter(Boolean);
+      if (parts.length) return parts.join(', ');
+      return j.display_name || null;
+    } catch {
+      return null;
+    }
+  }
+
   // ---------- spara match ----------
   async function saveMatch() {
     if (!match.winner) return;
     showToast('Hämtar plats…', 8000);
     const location = await getLocation();
-    const payload = buildPayload(location);
+    let placeText = settings.placeLabel || null;
+    if (location) {
+      const addr = await reverseGeocode(location.lat, location.lng);
+      if (addr) placeText = addr; // adress i klartext vinner över manuell etikett
+    }
+    const payload = buildPayload(location, placeText);
 
     // alltid spara lokalt i serien
     series.matches.push(payload);
@@ -403,7 +436,7 @@
     renderSeriesBadge();
   }
 
-  function buildPayload(location) {
+  function buildPayload(location, placeText) {
     return {
       app: 'boule-scoretracker',
       version: 1,
@@ -411,7 +444,7 @@
       startedAt: match.startedAt,
       endedAt: match.endedAt,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      place: settings.placeLabel || null,
+      place: placeText || settings.placeLabel || null,
       location, // { lat, lng, accuracy } eller null
       target: match.target,
       teams: match.teams.map((t) => ({ name: t.name, score: t.score })),
